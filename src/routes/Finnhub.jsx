@@ -10,7 +10,7 @@ import Layout from '../components/Layout';
 import Companybasicfinancials from '../pages/Companybasicfinancials';
 import Cbf from '../pages/Cbf';
 import CompanyProfile2 from '../pages/CompanyProfile2';
-import AboutUs from '../pages/AboutUs';
+// import AboutUs from '../pages/AboutUs';
 
 const Finnhub = () => {
   return (
@@ -24,7 +24,7 @@ const Finnhub = () => {
       <Route path="/companybasicfinancials" element={<Layout><Companybasicfinancials/></Layout>} />
       <Route path="/companybasicfinancials/:key" element={<Layout><Cbf/></Layout>} />
       <Route path="/companyprofile" element={<Layout><CompanyProfile2/></Layout>} />
-      <Route path="/aboutus" element={<Layout><AboutUs/></Layout>} />
+      {/* <Route path="/aboutus" element={<Layout><AboutUs/></Layout>} /> */}
     </Routes>
   );
 }
