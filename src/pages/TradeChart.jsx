@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
-import Chart from 'chart.js/auto'; // Import Chart.js
-import 'chartjs-adapter-date-fns'; // Import the date adapter
-import Spinner from '../components/Spinner'; // Import the Spinner component
+import Chart from 'chart.js/auto';
+import 'chartjs-adapter-date-fns';
+import Spinner from '../components/Spinner';
 import BACKENDURL from '../constant';
 
 const TradeChart = () => {
@@ -10,36 +10,59 @@ const TradeChart = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const chartRef = useRef(null);
+    const timeoutRef = useRef(null);
 
     useEffect(() => {
-        const eventSource = new EventSource(`${BACKENDURL}/api/finnhub/trades`); // Update with correct URL
+        const eventSource = new EventSource(`${BACKENDURL}/api/finnhub/trades`);
+        let hasReceivedData = false;
+
+        // Set up 10-second timeout
+        timeoutRef.current = setTimeout(() => {
+            if (!hasReceivedData) {
+                setError('API server is not responding. Please try again later.');
+                setLoading(false);
+                eventSource.close();
+            }
+        }, 10000);
 
         eventSource.onmessage = (event) => {
             try {
+                hasReceivedData = true;
+                // Clear timeout since we received data
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                }
+
                 const data = JSON.parse(event.data);
                 if (data.type === 'trade') {
                     const tradeData = data.data.map(trade => ({
                         price: trade.p,
                         volume: trade.v,
                         timestamp: new Date(trade.t),
-                        conditions: trade.c.join(', '), // Joining conditions into a string
+                        conditions: trade.c.join(', '),
                         symbol: trade.s
                     }));
                     setTrades(prevTrades => [...prevTrades, ...tradeData]);
-                    setLoading(false); // Hide loader once data is received
+                    setLoading(false);
                 }
             } catch (error) {
                 console.error('Error parsing message:', error);
+                setError('Error processing trade data');
+                setLoading(false);
             }
         };
 
         eventSource.onerror = (event) => {
             console.error('EventSource error:', event);
-            setError('EventSource error');
-            // setLoading(false); // Hide loader if there's an error
+            setError('Connection error occurred');
+            setLoading(false);
+            eventSource.close();
         };
 
         return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
             eventSource.close();
         };
     }, []);
@@ -60,18 +83,18 @@ const TradeChart = () => {
                 backgroundColor: 'rgba(0, 173, 181, 0.2)',
                 borderWidth: 2,
                 fill: true,
-                tension: 0.1, // Smooth curve
+                tension: 0.1,
             }
         ]
     };
 
     const chartOptions = {
         responsive: true,
-        maintainAspectRatio: false, // Allow the chart to be responsive
+        maintainAspectRatio: false,
         plugins: {
             title: {
                 display: true,
-                text: trades.length > 0 ? `Symbol : ${trades[0].symbol}` : 'Trade Chart', // Use the symbol `s` as title
+                text: trades.length > 0 ? `Symbol : ${trades[0].symbol}` : 'Trade Chart',
                 color: '#EEEEEE',
                 font: {
                     size: 20
@@ -116,8 +139,19 @@ const TradeChart = () => {
         }
     };
 
-    if (error) return <div className="text-red-500 text-center py-4">Error: {error}</div>;
-    if (loading) return <Spinner height="300px" />;
+    if (error) return (
+        <div className="px-6 bg-gray-900 shadow-md py-20 h-screen">
+            <div className="text-red-500 text-center py-4 text-lg">
+                {error}
+            </div>
+        </div>
+    );
+    
+    if (loading) return (
+        <div className="px-6 bg-gray-900 shadow-md py-20 h-screen">
+            <Spinner height="300px" />
+        </div>
+    );
 
     return (
         <div className="px-6 bg-gray-900 shadow-md py-20 h-screen">
